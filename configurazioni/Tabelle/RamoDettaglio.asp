@@ -220,7 +220,7 @@ var xx;
 										<%if SoloLettura=false then%>
 										<div class="mt-3">
 											<div style="float:left; display:block;">
-												<button style="font-size: 1.25rem; margin-right: 1rem;" class="add btn btn-primary todo-list-add-btn" type="button" onclick="localFun('submit','0');">inserisciiiii</button>		
+												<button style="font-size: 1.25rem; margin-right: 1rem;" class="add btn btn-primary todo-list-add-btn" type="button" onclick="localFun('submit','0');">Inserisc</button>		
 											</div>
 											<%elseif OperTabella="CALL_DEL" then  %>
 											<div style="float:left; display:block;">
