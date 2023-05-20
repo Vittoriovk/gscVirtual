@@ -1,0 +1,1137 @@
+<%
+  NomePagina="ClienteModifica.asp"
+  titolo="Clienti"
+%>
+<!--#include virtual="/gscVirtual/include/includeStdCheck.asp"-->
+<!--#include virtual="/gscVirtual/common/functionCf.asp"-->
+<!--#include virtual="/gscVirtual/common/functionCfScript.asp"-->
+<!--#include virtual="/gscVirtual/common/functionDataList.asp"-->
+<!--#include virtual="/gscVirtual/common/functionDataListScript.asp"-->
+
+<%
+  livelloPagina="00"
+%>
+<!--#include virtual="/gscVirtual/include/utility.asp"-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--#include virtual="/gscVirtual/include/head.asp"-->
+<!-- Custom styles for this template -->
+<link href="<%=VirtualPath%>/css/simple-sidebar.css" rel="stylesheet">
+</head>
+<!--#include virtual="/gscVirtual/js/functionTable.js"-->
+<!--#include virtual="/gscVirtual/js/functionLocalita.js"-->
+<script language="JavaScript">
+
+function calcolaCFClie()
+{
+   var nome=$("#Cognome0").val();
+   var cogn=$("#Nome0").val();
+   var sess=$("#IdSesso0").val();;
+  
+   var dtna=$("#DataNascita0").val();
+   var stat=$("#StatoNascita0").val();
+   var comu=$("#ComuneNascita0").val();
+   var prov=$("#ProvinciaNascita0").val();
+   var cf = calcolaCF(nome,cogn,sess,dtna,stat,prov,comu);
+   if (cf.length>0)
+      $("#CodiceFiscale0").val(cf);
+}
+function calcolaCFAmmiPrep(id)
+{
+   var nome=$("#Cognome" + id + "0").val();
+   var cogn=$("#Nome" + id + "0").val();
+   var sess=$("#IdSesso" + id + "0").val();;
+  
+   var dtna=$("#DataNascita" + id + "0").val();
+   var stat=$("#StatoNascita" + id + "0").val();
+   var comu=$("#ComuneNascita" + id + "0").val();
+   var prov=$("#ProvinciaNascita" + id + "0").val();
+   var cf = calcolaCF(nome,cogn,sess,dtna,stat,prov,comu);
+   if (cf.length>0)
+      $("#CodiceFiscale" + id + "0").val(cf);
+}
+function localFun(Op,Id)
+{
+	xx=ImpostaValoreDi("DescLoaded","0");
+	xx=ElaboraControlli();
+	
+ 	if (xx==false)
+	   return false;
+
+	if (ValoreDi("CheckTS")=="S") {
+       var radioValue = $("input[name='TipoSocietaGR']:checked").val();
+	   if(!(radioValue)){
+	      alert("indicare il Tipo di societa");
+	      return false;
+	   }
+	}
+	ImpostaValoreDi("Oper","update");
+	document.Fdati.submit();
+}
+
+</script>
+<body>
+<!-- Set Rs,MsgErrore,NameRangeD,NameRangeN,NameLoaded,DescLoaded,UsaPaginazione=false,SavePaginazione=false -->
+<!--#include virtual="/gscVirtual/include/setupParm.asp"-->
+<!--#include virtual="/gscVirtual/include/GetPagSize.asp"-->
+
+<!--#include virtual="/gscVirtual/modelli/FunctionAccount.asp"-->
+  
+ <!-- javascript locale -->
+<script>
+function localSubmit(Op)
+{
+var xx;
+    xx=false;
+	if (Op=="submit")
+	   xx=ElaboraControlli();
+   	
+ 	if (xx==false)
+	   return false;
+		
+	ImpostaValoreDi("Oper","update");
+	document.Fdati.submit(); 
+}
+</script>
+
+<%
+
+  FirstLoad=(Request("CallingPage")<>NomePagina)
+  IdAccount=0
+  IdCliente=0
+  if FirstLoad then 
+	 IdCliente   = "0" & Session("swap_IdCliente")
+	 if Cdbl(IdCliente)=0 then 
+		IdCliente = cdbl("0" & getValueOfDic(Pagedic,"IdCliente"))
+	 end if   
+	 IdAccount   = "0" & Session("swap_IdAccount")
+	 if Cdbl(IdAccount)=0 then 
+		IdAccount = cdbl("0" & getValueOfDic(Pagedic,"IdAccount"))
+	 end if 
+	 IdAzienda   = "0" & Session("swap_IdAzienda")
+	 if Cdbl(IdAzienda)=0 then 
+		IdAzienda = cdbl("0" & getValueOfDic(Pagedic,"IdAzienda"))
+	 end if	 
+	 OperAmmesse   = Session("swap_OperAmmesse")
+	 OperTabella   = Session("swap_OperTabella")
+	 PaginaReturn  = getValueOfDic(Pagedic,"PaginaReturn") 
+	 if PaginaReturn="" then 
+		PaginaReturn = Session("swap_PaginaReturn")
+	 end if 
+	 if Cdbl(IdCliente)=0 then 
+	    IdTipoPers=Session("swap_IdPersCliente")
+	 end if 
+
+  else
+	 IdAccount       = "0" & getValueOfDic(Pagedic,"IdAccount")
+	 IdCliente = "0" & getValueOfDic(Pagedic,"IdCliente")
+	 OperAmmesse     = getValueOfDic(Pagedic,"OperAmmesse")
+	 OperTabella     = getValueOfDic(Pagedic,"OperTabella") 
+	 PaginaReturn    = getValueOfDic(Pagedic,"PaginaReturn")
+	 if Cdbl(IdCliente)=0 then 
+	    IdTipoPers=getValueOfDic(Pagedic,"IdTipoPers")
+	 end if	 
+   end if 
+   IdCliente = cdbl(IdCliente)
+   IdAccount = cdbl(IdAccount)
+   if OperAmmesse="" then 
+      if IdCliente = 0 then 
+         OperAmmesse="CRUD"
+      end if 
+   end if 
+
+  'sono in inserimento : creo un account fittizio 
+  if cdbl(IdAccount)=0 and OperTabella="CALL_INS" then 
+     IdAccount=GetTempAccount()
+  end if 
+  
+  'inserisco account 
+   if Oper=ucase("update") then 
+      Ritorna=false 
+	  OperAmmesse="U"
+      Session("TimeStamp")=TimePage
+      MsgErrore=""
+      Cognome    = Request("Cognome0")
+      Nome       = Request("Nome0")
+	  Nominativo = Request("Denominazione0")
+	  if Nominativo = "" then 
+	     Nominativo =  trim(trim(Cognome) & " " & Trim(Nome)) 
+	  end if 
+
+	  StatoNascita     = Request("StatoNascita0")
+	  ComuneNascita    = Request("ComuneNascita0")
+	  ProvinciaNascita = Request("ProvinciaNascita0")
+	  DataNascita      = Request("DataNascita0")
+	  if len(DataNascita)<>10 then 
+	     DataNascita=0
+	  else 
+	     DataNascita=DataStringa(DataNascita)
+	  end if 
+	  IdSesso       = Request("IdSesso0")
+      CodiceFiscale = Request("CodiceFiscale0")
+      PartititaIva  = Request("PartitaIva0")
+	  TipoSocieta   = Request("TipoSocietaGR")
+      CognomePreposto       = Request("CognomePreposto0")
+      NomePreposto          = Request("NomePreposto0")
+      CodiceFiscalePreposto = Request("CodiceFiscalePreposto0")
+      PartitaIvaPreposto    = Request("PartitaIvaPreposto0")
+      IndirizzoPreposto     = Request("IndirizzoPreposto0")
+      CittaPreposto         = Request("CittaPreposto0")
+      ProvinciaPreposto     = Request("ProvinciaPreposto0")
+      CapPreposto           = Request("CapPreposto0")
+	  StatoNascitaPreposto     = Request("StatoNascitaPreposto0")
+	  ComuneNascitaPreposto    = Request("ComuneNascitaPreposto0")
+	  ProvinciaNascitaPreposto = Request("ProvinciaNascitaPreposto0")
+	  DataNascitaPreposto      = Request("DataNascitaPreposto0")
+	  if len(DataNascitaPreposto)<>10 then 
+	     DataNascitaPreposto=0
+	  else 
+	     DataNascitaPreposto=DataStringa(DataNascitaPreposto)
+	  end if 
+      IdSessoPreposto       = Request("IdSessoPreposto0")
+      SezioneRuiPreposto    = Request("SezioneRuiPreposto0")
+      NumeroRuiPreposto     = Request("NumeroRuiPreposto0")
+      DataIscrizioneRuiPreposto = Request("DataIscrizioneRuiPreposto0")
+	  if len(DataIscrizioneRuiPreposto)<>10 then 
+	     DataIscrizioneRuiPreposto=0
+      else
+	     DataIscrizioneRuiPreposto=DataStringa(DataIscrizioneRuiPreposto)
+	  end if 
+
+      CognomeAmministratore       = Request("CognomeAmministratore0")
+      NomeAmministratore          = Request("NomeAmministratore0")
+      CodiceFiscaleAmministratore = Request("CodiceFiscaleAmministratore0")
+      PartitaIvaAmministratore    = Request("PartitaIvaAmministratore0")
+      IndirizzoAmministratore     = Request("IndirizzoAmministratore0")
+      CittaAmministratore         = Request("CittaAmministratore0")
+      ProvinciaAmministratore     = Request("ProvinciaAmministratore0")
+      CapAmministratore           = Request("CapAmministratore0")
+	  StatoNascitaAmministratore     = Request("StatoNascitaAmministratore0")
+	  ComuneNascitaAmministratore    = Request("ComuneNascitaAmministratore0")
+	  ProvinciaNascitaAmministratore = Request("ProvinciaNascitaAmministratore0")
+	  DataNascitaAmministratore      = Request("DataNascitaAmministratore0")
+	  if len(DataNascitaAmministratore)<>10 then 
+	     DataNascitaAmministratore=0
+	  else 
+	     DataNascitaAmministratore=DataStringa(DataNascitaAmministratore)
+	  end if 
+
+      IdSessoAmministratore = Request("IdSessoAmministratore0")
+      if Cdbl(IdCliente)=0 then 
+		 if Cdbl(IdAccount)=0 then 
+		    MsgErrore="errore di sistema : contattare assistenza"
+         else 
+		    myUpd = ""
+		    myUpd = myUpd & " Update Account Set IdAzienda=" & Session("IdAziendaWork") 
+			myUpd = myUpd & ",IdTipoAccount='Clie'"
+			myUpd = myUpd & ",FlagAttivo='S',Abilitato=0"
+			myUpd = myUpd & ",Nominativo='" & apici(Nominativo) & "'"
+			myUpd = myUpd & " Where IdAccount=" & IdAccount
+			ConnMsde.execute = MyUpd
+			NextL=cdbl(session("LivelloAccount") + 1)
+            MyQ = "" 
+            MyQ = MyQ & " Insert into Cliente (IdAccount,IdAzienda,Denominazione,IdTipoDitta"
+			MyQ = MyQ & ",IdAccountLivello1,IdAccountLivello2,IdAccountLivello3)"
+            MyQ = MyQ & " values (" & IdAccount & "," & Session("IdAziendaWork") & ",'" & Apici(Nominativo) & "'"
+            MyQ = MyQ & ",'" & apici(IdTipoPers) & "'"
+			MyQ = MyQ & "," & Session("LoginRefAccountLev1") & "," & Session("LoginRefAccountLev2") & "," & Session("LoginRefAccountLev3")
+			MyQ = MyQ & ")"
+            ConnMsde.execute MyQ 
+			'response.write MyQ
+            If Err.Number <> 0 Then 
+               MsgErrore = ErroreDb(Err.description)
+			   IdAccount=0
+            else
+			   Ritorna=true 
+               IdCliente = GetTableIdentity("Cliente")    
+            end if 
+         end if 
+      end if 
+      'aggiorno Cliente 
+
+      MyQ = "" 
+      MyQ = MyQ & " update Cliente set "
+      MyQ = MyQ & " Denominazione = '" & apici(Nominativo) & "'"
+      MyQ = MyQ & ",Cognome = '" & apici(Cognome) & "'"
+      MyQ = MyQ & ",Nome = '"    & apici(Nome)    & "'"
+	  MyQ = MyQ & ",StatoNascita = '" & apici(StatoNascita) & "'"
+	  MyQ = MyQ & ",ComuneNascita = '" & apici(ComuneNascita) & "'"
+	  MyQ = MyQ & ",ProvinciaNascita = '" & apici(ProvinciaNascita) & "'"
+	  MyQ = MyQ & ",DataNascita = " & DataNascita 
+      MyQ = MyQ & ",CodiceFiscale = '" & apici(CodiceFiscale) & "'"
+      MyQ = MyQ & ",PartitaIva = '"  & apici(PartititaIva) & "'"
+	  MyQ = MyQ & ",TipoSocieta = '"  & apici(TipoSocieta) & "'"
+      MyQ = MyQ & ",CognomePreposto = '"       & apici(CognomePreposto) & "'"
+      MyQ = MyQ & ",NomePreposto = '"          & apici(NomePreposto) & "'"
+      MyQ = MyQ & ",CodiceFiscalePreposto = '" & apici(CodiceFiscalePreposto) & "'"
+      MyQ = MyQ & ",PartitaIvaPreposto = '"    & apici(PartitaIvaPreposto) & "'"
+      MyQ = MyQ & ",IndirizzoPreposto = '"     & apici(IndirizzoPreposto) & "'"
+      MyQ = MyQ & ",CittaPreposto = '"         & apici(CittaPreposto) & "'"
+      MyQ = MyQ & ",ProvinciaPreposto = '"     & apici(ProvinciaPreposto) & "'"
+      MyQ = MyQ & ",CapPreposto = '"           & apici(CapPreposto) & "'"
+	  MyQ = MyQ & ",StatoNascitaPreposto = '"  & apici(StatoNascitaPreposto) & "'"
+	  MyQ = MyQ & ",ComuneNascitaPreposto = '" & apici(ComuneNascitaPreposto) & "'"
+	  MyQ = MyQ & ",ProvinciaNascitaPreposto = '" & apici(ProvinciaNascitaPreposto) & "'"
+	  MyQ = MyQ & ",DataNascitaPreposto = "    & DataNascitaPreposto 
+      MyQ = MyQ & ",SezioneRuiPreposto = '"    & apici(SezioneRuiPreposto) & "'"
+      MyQ = MyQ & ",NumeroRuiPreposto ='"      & apici(NumeroRuiPreposto) & "'"
+      MyQ = MyQ & ",DataIscrizioneRuiPreposto = " & DataIscrizioneRuiPreposto
+      MyQ = MyQ & ",CognomeAmministratore = '"       & apici(CognomeAmministratore) & "'"
+      MyQ = MyQ & ",NomeAmministratore = '"          & apici(NomeAmministratore) & "'"
+      MyQ = MyQ & ",CodiceFiscaleAmministratore = '" & apici(CodiceFiscaleAmministratore) & "'"
+      MyQ = MyQ & ",PartitaIvaAmministratore = '"    & apici(PartitaIvaAmministratore) & "'"
+      MyQ = MyQ & ",IndirizzoAmministratore = '"     & apici(IndirizzoAmministratore) & "'"
+      MyQ = MyQ & ",CittaAmministratore = '"         & apici(CittaAmministratore) & "'"
+      MyQ = MyQ & ",ProvinciaAmministratore = '"     & apici(ProvinciaAmministratore) & "'"
+      MyQ = MyQ & ",CapAmministratore = '"           & apici(CapAmministratore) & "'"
+	  MyQ = MyQ & ",StatoNascitaAmministratore = '"  & apici(StatoNascitaAmministratore) & "'"
+	  MyQ = MyQ & ",ComuneNascitaAmministratore = '" & apici(ComuneNascitaAmministratore) & "'"
+	  MyQ = MyQ & ",ProvinciaNascitaAmministratore = '" & apici(ProvinciaNascitaAmministratore) & "'"
+	  MyQ = MyQ & ",DataNascitaAmministratore = "    & DataNascitaAmministratore 
+	  MyQ = MyQ & ",IdSesso = '"                     & apici(IdSesso) & "'"
+	  MyQ = MyQ & ",IdSessoPreposto = '"             & apici(IdSessoPreposto) & "'"
+	  MyQ = MyQ & ",IdSessoAmministratore = '"       & apici(IdSessoAmministratore) & "'"
+	  
+      MyQ = MyQ & " Where IdCliente = " & IdCliente
+	  'response.write MyQ
+	  ConnMsde.execute MyQ 
+      If Err.Number <> 0 Then 
+	     Ritorna=false 
+         MsgErrore = ErroreDb(Err.description)
+	  else
+	    myUpd = ""
+	    myUpd = myUpd & " Update Account Set Nominativo='" & apici(Nominativo) & "'"
+		myUpd = myUpd & " Where IdAccount=" & IdAccount
+		ConnMsde.execute MyUpd	  
+      end if 
+   end if 
+
+   Dim DizDatabase
+   Set DizDatabase = CreateObject("Scripting.Dictionary")
+	 
+   'recupero i dati 
+  if cdbl(IdCliente)>0 then
+	  MySql = ""
+	  MySql = MySql & " Select * From  Cliente "
+	  MySql = MySql & " Where IdCliente=" & IdCliente
+	  xx=GetInfoRecordset(DizDatabase,MySql)
+	  IdTipoPers =Getdiz(DizDatabase,"IdTipoDitta")
+	  TipoSocieta=Getdiz(DizDatabase,"TipoSocieta")
+	  IdAccount =Cdbl(Getdiz(DizDatabase,"IdAccount"))
+  end if 
+     
+   DescPageOper="Aggiornamento"
+   if OperAmmesse="R" then 
+      DescPageOper = "Consultazione"
+   elseIf cdbl(IdCliente)=0 then 
+      DescPageOper = "Inserimento"
+   end if
+  'registro i dati della pagina 
+  xx=setValueOfDic(Pagedic,"IdCliente"        ,IdCliente)
+  xx=setValueOfDic(Pagedic,"IdAccount"        ,IdAccount)
+  xx=setValueOfDic(Pagedic,"OperAmmesse"      ,OperAmmesse)
+  xx=setValueOfDic(Pagedic,"IdTipoPers"       ,IdTipoPers)  
+  xx=setValueOfDic(Pagedic,"PaginaReturn"     ,PaginaReturn)
+  xx=setValueOfDic(Pagedic,"OperTabella"      ,OperTabella)
+ 
+  xx=setCurrent(NomePagina,livelloPagina) 
+  DescLoaded="0"  
+  showElabCf = false 
+  %>
+<% 
+  'xx=DumpDic(SessionDic,NomePagina)
+%>
+<div class="d-flex" id="wrapper">
+
+	<%
+      callP=VirtualPath & "bar/" & Session("sideBar_" & Session("LoginIdAccount")) 
+      Server.Execute(callP) 
+	%>
+
+    <!-- Page Content -->
+	<div id="page-content-wrapper">
+	<%
+      callP=VirtualPath & "bar/" & Session("TopBar_" & Session("LoginIdAccount")) 
+      Server.Execute(callP) 
+	  
+	%>	
+
+		<div class="container-fluid">
+			<form name="Fdati" Action="<%=NomePagina%>" method="post">
+			<div class="row">
+			<%RiferimentoA="col-1  text-center;" & VirtualPath & PaginaReturn & ";;2;prev;Indietro;;"%>
+			<!--#include virtual="/gscVirtual/include/Anchor.asp"-->			
+				<div class="col-11"><h3>Gestione Cliente :</b> <%=DescPageOper%> </h3>
+				</div>
+			</div>
+   <!--#include virtual="/gscVirtual/include/showErrorDivRow.asp"-->
+
+    <%
+	  stdClass="class='form-control form-control-sm'"
+      l_Id = "0"
+	  err.clear
+      ReadOnly=""
+	  SoloLettura=false
+      if instr(OperAmmesse,"U")=0 or (instr(OperAmmesse,"I")>0 and cdbl("0" & IdCliente)>0) then 
+         SoloLettura=true
+         ReadOnly=" readonly "
+      end if 
+   
+   %>
+   <div class="row">
+      <div class="col-2"><p class="font-weight-bold">Tipo Utenza</p></div>   
+      <div class = "col-3">
+	     <%
+		 q = "select * from TipoDitta where IdTipoditta='" & apici(IdTipoPers) & "'"
+		 valo = LeggiCampo(q,"DescTipoDitta")
+	     %>
+		 <input type="text" readonly class="form-control" value="<%=valo%>" >	 
+      </div>
+	  <%if IdTipoPers = "PEGI" then
+           TipoCapi=""
+		   TipoPers=""
+		   if TipoSocieta="CAPI" then 
+		      TipoCapi = " checked "
+		   elseif TipoSocieta="PERS" then 
+		      TipoPers = " checked "
+		   end if 
+	  %>
+	  <input type="hidden" name="CheckTS" id="CheckTS" value="S">
+	  <div class="col-3"><B>Societ&agrave; di </B>
+	        &nbsp;&nbsp;
+            <input name="TipoSocietaGR" type="radio" <%=TipoCapi%> id="TipoSocieta1" value="CAPI" >&nbsp;<B>Capitale</B>
+			&nbsp;&nbsp;
+            <input name="TipoSocietaGR" type="radio" <%=TipoPers%> id="TipoSocieta2" value="PERS" >&nbsp;<B>Persone</B>
+      </div> 
+	  <%else%>
+	  <input type="hidden" name="CheckTS" id="CheckTS" value="N">
+	  <%end if %>
+      <div class="col-2"><p class="font-weight-bold"> </p>
+      </div> 
+   </div>
+   <%
+   NameLoaded= ""
+   if IdTipoPers="PEGI" then
+      NameLoaded= NameLoaded & "Denominazione,TE"   		  
+   elseif  IdTipoPers="DITT" then 
+      NameLoaded= NameLoaded & "Denominazione,TE"   		  
+      NameLoaded= NameLoaded & ";Cognome,TE"   		  
+	  NameLoaded= NameLoaded & ";Nome,TE"   		  
+   else 
+      NameLoaded= NameLoaded & "Cognome,TE"   		  
+	  NameLoaded= NameLoaded & ";Nome,TE"   		  
+   end if 
+   %>
+   
+   
+   <%if IdTipoPers="PEGI" or IdTipoPers="DITT" then%>
+   <div class="row">
+      <div class="col-2">
+         <p class="font-weight-bold">Denominazione</p>
+      </div> 
+	  <div class="col-8">
+	  	  <%
+ 		  nome="Denominazione" & l_id
+		  valo=Getdiz(DizDatabase,"Denominazione")
+		  %>	  
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+	  </div>
+      <div class="col-2">
+         <p class="font-weight-bold"> </p>
+      </div>
+   </div>    
+   <%end if%> 
+   
+   <%if IdTipoPers="PEFI" or IdTipoPers="DITT" then
+      showElabCf = true 
+      lblC0 = "Cognome" 
+	  lblC1 = "Nome"
+      colss = "col-3"
+
+   %>
+
+   <div class="row">
+      <div class="col-2">
+         <p class="font-weight-bold"><%=lblC0%></p>
+      </div> 
+	  <div class="<%=colss%>">
+	  	  <%
+		  nome="Cognome" & l_id
+		  valo=Getdiz(DizDatabase,"Cognome")
+		  %>	  
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+	  </div>
+	  <%if IdTipoPers<>"PEGI" then%>
+      <div class="col-2">
+         <p class="font-weight-bold"><%=lblC1%></p>
+      </div> 
+	  <%end if %>
+	  <div class="<%=colss%>">
+	  	  <%
+		  nome="Nome" & l_id
+		  valo=Getdiz(DizDatabase,"Nome")
+		  %>	  
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+	  </div>
+      <div class="col-2">
+         <p class="font-weight-bold"> </p>
+      </div>
+   </div>   
+   <%end if %>
+   <%if IdTipoPers="PEFI" or IdTipoPers="DITT" then%>
+   <div class="row">
+      <div class="col-2">
+         <p class="font-weight-bold">Stato Nascita</p>
+      </div>
+      <div class = "col-3">
+	     <%
+		 valo=Getdiz(DizDatabase,"StatoNascita")
+		 if valo="" then 
+		    valo="IT"
+		 end if
+         IdStato=Valo 
+		 q = ""
+		 q = q & "Select * from Stato "
+		 if readonly<>"" then 
+            q = q & " Where IdStato='" & valo & "'" 
+		 end if 
+		 q = q & " order By DescStato"
+		 onC = "absoluteChangeStato('StatoNascita0','ProvinciaNascita0');"
+	     response.write ListaDbChangeCompleta(q,"StatoNascita" & l_Id,valo ,"IdStato","DescStato" ,0,onC,"","","","",stdClass)
+	     %>
+       </div>
+      <div class="col-2">
+         <p class="font-weight-bold">Provincia Nascita</p>
+      </div> 
+	  <div class="col-3">
+	  	  <%
+          NameLoaded= NameLoaded & ";ProvinciaNascita,TE"   		  
+		  nome="ProvinciaNascita" & l_id
+		  valo=Getdiz(DizDatabase,"ProvinciaNascita")
+		  idProvincia=valo
+		  onC = "absoluteChangeProvincia('StatoNascita0','ProvinciaNascita0','ComuneNascita0');"
+		  listDataProv=""
+		  listDataComu=""
+		  if IdStato="IT" then 
+		     listDataProv="absoluteProvinciaIT"
+			 if IdProvincia<>"" then 
+			    IdProvincia = getSiglaProvinciaDaProvincia(IdProvincia)
+				if IdProvincia<>"" then 
+			       listDataComu="absoluteComune" & IdProvincia
+				end if 
+			 end if 
+		  end if 
+		  %>	  
+	      <input type="text" list="<%=listDataProv%>" onchange="<%=onC%>" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+	  </div>   
+      <div class="col-2">
+         <p class="font-weight-bold"> </p>
+      </div>
+   </div>
+   <div class="row">
+      <div class="col-2">
+         <p class="font-weight-bold">Comune Nascita</p>
+      </div> 
+	  <div class="col-3">
+	  	  <%
+          NameLoaded= NameLoaded & ";ComuneNascita,TE"   		  
+		  nome="ComuneNascita" & l_id
+		  valo=Getdiz(DizDatabase,"ComuneNascita")
+		  %>	  
+	      <input type="text" list="<%=listDataComu%>" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+	  </div> 
+      <div class="col-1">
+         <p class="font-weight-bold">Data Nascita</p>
+      </div> 
+	  <div class="col-2">
+	  	  <%
+          NameLoaded= NameLoaded & ";DataNascita,TE"   		  
+		  nome="DataNascita" & l_id
+		  valo=StoD(Getdiz(DizDatabase,"DataNascita"))
+		  %>	  
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" value="<%=valo%>" 
+                 class="form-control mydatepicker " placeholder="gg/mm/aaaa" title="formato : gg/mm/aaaa" >
+	  </div>
+	  <div class="col-1">
+         <p class="font-weight-bold">Sesso</p>
+      </div>
+	  <div class="col-1">
+	  	     <%
+		 valo=Getdiz(DizDatabase,"IdSesso")
+		 if valo="" then 
+		    valo="M"
+		 end if
+		 q = ""
+		 q = q & "Select * from Sesso "
+		 if readonly<>"" then 
+            q = q & " Where IdSesso='" & valo & "'" 
+		 end if 
+		 q = q & " order By DescSesso"
+	     response.write ListaDbChangeCompleta(q,"IdSesso" & l_Id,valo ,"IdSesso","DescSesso" ,0,"","","","","",stdClass)
+	     %>
+		 </div>
+      <div class="col-2">
+         <p class="font-weight-bold"> </p>
+      </div>	  
+   </div>
+
+
+	  
+   <%end if %>
+   
+   <div class="row">
+      <div class="col-2">
+         <p class="font-weight-bold">Codice fiscale</p>
+      </div> 
+	  <div class="col-3">
+		  <%
+		  if IdTipoPers = "PEGI" then
+		     NameLoaded= NameLoaded & ";CodiceFiscale,PG" 
+		  else 
+		     NameLoaded= NameLoaded & ";CodiceFiscale,CF" 
+		  end if 
+		  nome="CodiceFiscale" & l_id
+		  valo=Getdiz(DizDatabase,"CodiceFiscale")
+		  %>	  
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+	  </div>
+      <div class="col-1">
+		  <%if Readonly="" and showElabCf then %>
+            <a href="#" title="Traduci" onclick="reverseCF('CodiceFiscale0','','','ComuneNascita0','ProvinciaNascita0','','IdSesso0','DataNascita0','','StatoNascita0')">  
+               <i class="fa fa-2x fa-retweet"></i>
+			</a>
+            <a href="#" title="Calcola" onclick="calcolaCFClie()">  
+               <i class="fa fa-2x fa-id-card-o"></i>
+			</a>			
+		  <%end if %>
+         
+      </div>
+	  <%if IdTipoPers="PEFI" then%>
+      <div class="col-7">
+         <p class="font-weight-bold"> </p>
+      </div>
+	  
+	  <% else %>
+      <div class="col-2">
+         <p class="font-weight-bold">Partita Iva</p>
+      </div> 
+	  	  <div class="col-3">
+		  <%
+		  NameLoaded= NameLoaded & ";PartitaIva,PI" 
+		  nome="PartitaIva" & l_id
+		  valo=Getdiz(DizDatabase,"PartitaIva")
+		  %>
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+	  </div>
+      <div class="col-2">
+         <p class="font-weight-bold"> </p>
+      </div>
+	  <% end if  %>
+   </div> 
+    <%if IdTipoPers="PEGI" then%>
+	
+	  <a class="btn btn-info" data-toggle="collapse" href="#collapseAmministratore" role="button" 
+		 aria-expanded="false" aria-controls="collapseAmministratore">
+		 <span Id="Amministratore_Plus"><i class="fa fa-1x fa-plus-circle"></i></span>
+		 <span Id="Amministratore_Minus" style= "display:none"><i class="fa fa-1x fa-minus-circle"></i></span>
+		 <input type="hidden" id="Amministratore_plusMinus" value = "+">
+		 </a>
+		 <B> Amministratore </B>
+	  </p> 
+	  
+
+		<div class="collapse" id="collapseAmministratore">
+		   <div class="row">
+			  <div class="col-2"><p class="font-weight-bold">Cognome</p></div> 
+			  <div class="col-3">
+				  <%
+				  NameLoaded= NameLoaded & ";CognomeAmministratore,TE"
+				  nome="CognomeAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"CognomeAmministratore")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold">Nome</p></div> 
+			  <div class="col-3">
+				  <%
+				  NameLoaded= NameLoaded & ";NomeAmministratore,TE"
+				  nome="NomeAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"NomeAmministratore")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold"> </p>
+			  </div>
+		   </div> 
+
+  
+		   <div class="row">
+			  <div class="col-2">
+				 <p class="font-weight-bold">Stato Nascita</p>
+			  </div>
+			  
+			  <div class = "col-3">
+				 <%
+				 NameLoaded= NameLoaded & ";StatoNascitaAmministratore,LI"  				 
+				 valo=Getdiz(DizDatabase,"StatoNascitaAmministratore")
+				 if valo="" then 
+					valo="IT"
+				 end if
+				 IdStatoAmministratore=Valo 
+				 q = ""
+				 q = q & "Select * from Stato "
+				 if readonly<>"" then 
+					q = q & " Where IdStato='" & valo & "'" 
+				 end if 
+				 q = q & " order By DescStato"
+				 onC = "absoluteChangeStato('StatoNascitaAmministratore0','ProvinciaNascitaAmministratore0');"
+				 response.write ListaDbChangeCompleta(q,"StatoNascitaAmministratore" & l_Id,valo ,"IdStato","DescStato" ,0,onC,"","","","",stdClass)
+				 %>
+			   </div>			  
+			  <div class="col-2">
+				 <p class="font-weight-bold">Provincia Nascita</p>
+			  </div> 
+			  <div class="col-3">
+				  <%
+				  NameLoaded= NameLoaded & ";ProvinciaNascitaAmministratore,TE"   		  
+				  nome="ProvinciaNascitaAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"ProvinciaNascitaAmministratore")
+				  IdProvinciaAmmi=Valo
+		          onC = "absoluteChangeProvincia('StatoNascitaAmministratore0','ProvinciaNascitaAmministratore0','ComuneNascitaAmministratore0');"
+                  listDataProvAmmi=""
+		          listDataComuAmmi=""
+				  if IdStatoAmministratore="IT" then 
+					 listDataProvAmmi="absoluteProvinciaIT"
+					 if IdProvinciaAmmi<>"" then 
+						IdProvinciaAmmi = getSiglaProvinciaDaProvincia(IdProvinciaAmmi)
+						if IdProvinciaAmmi<>"" then 
+						   listDataComuAmmi="absoluteComune" & IdProvinciaAmmi
+						end if 
+					 end if 
+				  end if 				  
+				  %>	  
+				  <input type="text" list="<%=listDataProvAmmi%>" onchange="<%=onC%>" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+			  </div> 	  
+
+			  <div class="col-2">
+				 <p class="font-weight-bold"> </p>
+			  </div>
+		   </div>
+  
+		   <div class="row">
+			  <div class="col-2">
+				 <p class="font-weight-bold">Comune Nascita</p>
+			  </div> 
+			  <div class="col-3">
+				  <%
+				  NameLoaded= NameLoaded & ";ComuneNascitaAmministratore,TE"   		  
+				  nome="ComuneNascitaAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"ComuneNascitaAmministratore")
+				  
+				  %>	  
+				  <input type="text"  list="<%=listDataComuAmmi%>" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+			  </div> 		   
+			  <div class="col-1">
+				 <p class="font-weight-bold">Data Nascita</p>
+			  </div> 
+			  <div class="col-2">
+				  <%
+				  NameLoaded= NameLoaded & ";DataNascitaAmministratore,TE"   		  
+				  nome="DataNascitaAmministratore" & l_id
+				  valo=StoD(Getdiz(DizDatabase,"DataNascitaAmministratore"))
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" value="<%=valo%>" 
+						 class="form-control mydatepicker " placeholder="gg/mm/aaaa" title="formato : gg/mm/aaaa" >
+			  </div> 
+		  	  <div class="col-1">
+                 <p class="font-weight-bold">Sesso</p>
+             </div>
+	  <div class="col-1">
+	  	     <%
+		 valo=Getdiz(DizDatabase,"IdSessoAmministratore")
+		 if valo="" then 
+		    valo="M"
+		 end if
+		 q = ""
+		 q = q & "Select * from Sesso "
+		 if readonly<>"" then 
+            q = q & " Where IdSesso='" & valo & "'" 
+		 end if 
+		 q = q & " order By DescSesso"
+	     response.write ListaDbChangeCompleta(q,"IdSessoAmministratore" & l_Id,valo ,"IdSesso","DescSesso" ,0,"","","","","",stdClass)
+	     %>
+		 </div>
+			  <div class="col-2">
+				 <p class="font-weight-bold"> </p>
+			  </div>	  
+		   </div>
+		   <div class="row">
+			  <div class="col-2"><p class="font-weight-bold">Codice fiscale</p></div> 
+			  <div class="col-2">
+				  <%
+				  nome="CodiceFiscaleAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"CodiceFiscaleAmministratore")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-1">
+				  <%if Readonly=""  then %>
+					<a href="#!" title="Traduci" onclick="reverseCF('CodiceFiscaleAmministratore0','','','ComuneNascitaAmministratore0','ProvinciaNascitaAmministratore0','','IdSessoAmministratore0','DataNascitaAmministratore0','','StatoNascitaAmministratore0')">  
+					   <i class="fa fa-2x fa-retweet"></i>
+					</a>
+					<a href="#!" title="Calcola" onclick="calcolaCFAmmiPrep('Amministratore')">  
+					   <i class="fa fa-2x fa-id-card-o"></i>
+					</a>			
+				  <%end if %>
+				 
+			  </div> 	 			  
+			  <div class="col-2"><p class="font-weight-bold"> </p></div>
+		   </div> 
+		   
+		   <div class="row">
+			  <div class="col-2"><p class="font-weight-bold">Indirizzo</p></div> 
+			  <div class="col-3">
+				  <%
+				  nome="IndirizzoAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"IndirizzoAmministratore")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold">Citta'</p></div> 
+				  <div class="col-3">
+				  <%
+				  nome="CittaAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"CittaAmministratore")
+				  %>
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold"> </p></div>
+		   </div> 
+		   <div class="row">
+			  <div class="col-2"><p class="font-weight-bold">Provincia</p></div> 
+			  <div class="col-3">
+				  <%
+				  nome="ProvinciaAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"ProvinciaAmministratore")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold">Cap</p></div> 
+				  <div class="col-3">
+				  <%
+				  nome="CapAmministratore" & l_id
+				  valo=Getdiz(DizDatabase,"CapAmministratore")
+				  %>
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold"> </p></div>
+		   </div> 
+		
+		</div>  <!-- fine sezione amministratore -->
+      <%end if  %>
+	  
+	  
+      <%if IdTipoPers="PEGI" and false then%>
+	  <a class="btn btn-info" data-toggle="collapse" href="#collapsePreposto" role="button" 
+		 aria-expanded="false" aria-controls="collapsePreposto">
+		 <span Id="Preposto_Plus"><i class="fa fa-1x fa-plus-circle"></i></span>
+		 <span Id="Preposto_Minus" style= "display:none"><i class="fa fa-1x fa-minus-circle"></i></span>
+		 <input type="hidden" id="Preposto_plusMinus" value = "+">
+		 </a>
+		 <B> Preposto </B>
+		 <%
+		 'puo' copiare da amministratore 
+		 if readonly="" then 
+			%>
+			<button type="button" class="btn btn-success" onclick="copiaDaAmm();">Copia da amministratore</button>
+		 <%
+		 end if 
+		 %>
+	  </p> 
+	  
+
+		<div class="collapse" id="collapsePreposto">
+   <div class="row">
+      <div class="col-2"><p class="font-weight-bold">Cognome</p></div> 
+	  <div class="col-3">
+	  	  <%
+		  nome="CognomePreposto" & l_id
+		  valo=Getdiz(DizDatabase,"CognomePreposto")
+		  %>	  
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+	  </div>
+      <div class="col-2"><p class="font-weight-bold">Nome</p></div> 
+	  <div class="col-3">
+	  	  <%
+		  nome="NomePreposto" & l_id
+		  valo=Getdiz(DizDatabase,"NomePreposto")
+		  %>	  
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+	  </div>
+      <div class="col-2"><p class="font-weight-bold"> </p>
+      </div>
+   </div> 
+		   <div class="row">
+			  <div class="col-2">
+				 <p class="font-weight-bold">Stato Nascita</p>
+			  </div>
+			  
+			  <div class = "col-3">
+				 <%
+				  NameLoaded= ""
+				  NameLoaded= NameLoaded & "StatoNascitaPreposto,LI"  				 
+				 valo=Getdiz(DizDatabase,"StatoNascitaPreposto")
+				 if valo="" then 
+					valo="IT"
+				 end if
+				 IdStatoPreposto=Valo 
+				 q = ""
+				 q = q & "Select * from Stato "
+				 if readonly<>"" then 
+					q = q & " Where IdStato='" & valo & "'" 
+				 end if 
+				 q = q & " order By DescStato"
+				 onC = "absoluteChangeStato('StatoNascitaPreposto0','ProvinciaNascitaPreposto0');"
+				 response.write ListaDbChangeCompleta(q,"StatoNascitaPreposto" & l_Id,valo ,"IdStato","DescStato" ,0,onC,"","","","",stdClass)
+				 %>
+			   </div>			  
+			  <div class="col-2">
+				 <p class="font-weight-bold">Provincia Nascita</p>
+			  </div>
+			  <div class="col-3">
+				  <%
+				  NameLoaded= ""
+				  NameLoaded= NameLoaded & "ProvinciaNascitaPreposto,TE"   		  
+				  nome="ProvinciaNascitaPreposto" & l_id
+				  valo=Getdiz(DizDatabase,"ProvinciaNascitaPreposto")
+				  IdProvinciaPrep=Valo
+		          onC = "absoluteChangeProvincia('StatoNascitaPreposto0','ProvinciaNascitaPreposto0','ComuneNascitaPreposto0');"
+                  listDataProvPrep=""
+		          listDataComuPrep=""
+				  if IdStatoPreposto="IT" then 
+					 listDataProvPrep="absoluteProvinciaIT"
+					 if IdProvinciaPrep<>"" then 
+						IdProvinciaPrep = getSiglaProvinciaDaProvincia(IdProvinciaPrep)
+						if IdProvinciaPrep<>"" then 
+						   listDataComuPrep="absoluteComune" & IdProvinciaPrep
+						end if 
+					 end if 
+				  end if 				  
+				  %>	  
+				  <input type="text" list="<%=listDataProvPrep%>"  <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+			  </div> 			  
+          </div>
+   
+		   <div class="row">
+			  <div class="col-2">
+				 <p class="font-weight-bold">Comune Nascita</p>
+			  </div> 
+			  <div class="col-3">
+				  <%
+				  NameLoaded= ""
+				  NameLoaded= NameLoaded & "ComuneNascitaPreposto,TE"   		  
+				  nome="ComuneNascitaPreposto" & l_id
+				  valo=Getdiz(DizDatabase,"ComuneNascitaPreposto")
+				  
+				  %>	  
+				  <input type="text"  list="<%=listDataComuPrep%>" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >	  
+			  </div> 		   
+			  <div class="col-1">
+				 <p class="font-weight-bold">Data Nascita</p>
+			  </div> 
+			  <div class="col-2">
+				  <%
+				  NameLoaded= ""
+				  NameLoaded= NameLoaded & "DataNascitaPreposto,TE"   		  
+				  nome="DataNascitaPreposto" & l_id
+				  valo=StoD(Getdiz(DizDatabase,"DataNascitaPreposto"))
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" value="<%=valo%>" 
+						 class="form-control mydatepicker " placeholder="gg/mm/aaaa" title="formato : gg/mm/aaaa" >
+			  </div> 
+		  	  <div class="col-1">
+                 <p class="font-weight-bold">Sesso</p>
+             </div>
+	  <div class="col-1">
+	  	     <%
+		 valo=Getdiz(DizDatabase,"IdSessoPreposto")
+		 if valo="" then 
+		    valo="M"
+		 end if
+		 q = ""
+		 q = q & "Select * from Sesso "
+		 if readonly<>"" then 
+            q = q & " Where IdSesso='" & valo & "'" 
+		 end if 
+		 q = q & " order By DescSesso"
+	     response.write ListaDbChangeCompleta(q,"IdSessoPreposto" & l_Id,valo ,"IdSesso","DescSesso" ,0,"","","","","",stdClass)
+	     %>
+		 </div>
+   </div>
+   
+ 		   <div class="row">
+			  <div class="col-2"><p class="font-weight-bold">Codice fiscale</p></div> 
+			  <div class="col-2">
+				  <%
+				  nome="CodiceFiscalePreposto" & l_id
+				  valo=Getdiz(DizDatabase,"CodiceFiscalePreposto")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-1">
+				  <%if Readonly=""  then %>
+					<a href="#!" title="Traduci" onclick="reverseCF('CodiceFiscalePreposto0','','','ComuneNascitaPreposto0','ProvinciaNascitaPreposto0','','IdSessoPreposto0','DataNascitaPreposto0','','StatoNascitaPreposto0')">  
+					   <i class="fa fa-2x fa-retweet"></i>
+					</a>
+					<a href="#!" title="Calcola" onclick="calcolaCFAmmiPrep('Preposto')">  
+					   <i class="fa fa-2x fa-id-card-o"></i>
+					</a>			
+				  <%end if %>
+				 
+			  </div> 	 			  
+			  <div class="col-2"><p class="font-weight-bold"> </p></div>
+		   </div> 
+   
+		   <div class="row">
+			  <div class="col-2"><p class="font-weight-bold">Indirizzo Preposto</p></div> 
+			  <div class="col-3">
+				  <%
+				  nome="IndirizzoPreposto" & l_id
+				  valo=Getdiz(DizDatabase,"IndirizzoPreposto")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold">Citta' Preposto</p></div> 
+				  <div class="col-3">
+				  <%
+				  nome="CittaPreposto" & l_id
+				  valo=Getdiz(DizDatabase,"CittaPreposto")
+				  %>
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold"> </p></div>
+		   </div> 
+		   <div class="row">
+			  <div class="col-2"><p class="font-weight-bold">Provincia Preposto</p></div> 
+			  <div class="col-3">
+				  <%
+				  nome="ProvinciaPreposto" & l_id
+				  valo=Getdiz(DizDatabase,"ProvinciaPreposto")
+				  %>	  
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold">Cap Preposto</p></div> 
+				  <div class="col-3">
+				  <%
+				  nome="CapPreposto" & l_id
+				  valo=Getdiz(DizDatabase,"CapPreposto")
+				  %>
+				  <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+			  </div>
+			  <div class="col-2"><p class="font-weight-bold"> </p></div>
+		   </div> 
+		   
+   <div class="row">
+      <div class="col-2"><p class="font-weight-bold">Sezione Rui</p></div>   
+      <div class = "col-2">
+	     <%
+		 valo=Getdiz(DizDatabase,"SezioneRuiPreposto")
+		 q = ""
+		 q = q & " SELECT * From TipoRui where LivelloMinimo>=0 and LivelloMassimo<=99 order By DescTipoRui  "
+	     response.write ListaDbChangeCompleta(q,"SezioneRuiPreposto" & l_Id,valo ,"IdTipoRui","DescTipoRui" ,0,"","","","","",stdClass)
+	     %>
+      </div>
+
+      <div class="col-1"><p class="font-weight-bold">Num. RUI</p></div>   
+      <div class = "col-2">
+		  <%
+		  NameLoaded= NameLoaded & ";NumeroRuiPreposto,TE" 
+		  nome="NumeroRuiPreposto" & l_id
+		  valo=Getdiz(DizDatabase,"NumeroRuiPreposto")
+		  %>
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" class="form-control" value="<%=valo%>" >
+      </div>
+	  <div class="col-1"><p class="font-weight-bold">Iscritto il</p></div>
+      <div class = "col-2">
+		  <%
+		  NameLoaded= NameLoaded & ";DataIscrizioneRuiPreposto,DTO" 
+		  nome="DataIscrizioneRuiPreposto" & l_id
+		  valo=StoD(Getdiz(DizDatabase,"DataIscrizioneRuiPreposto"))
+		  %>
+	      <input type="text" <%=readonly%> name="<%=nome%>" id="<%=nome%>" value="<%=valo%>" 
+                 class="form-control mydatepicker " placeholder="gg/mm/aaaa" title="formato : gg/mm/aaaa" >		  
+      </div>
+   </div>
+</div>
+      
+
+
+   <%end if %>
+
+   <!--#include virtual="/gscVirtual/include/setDataForCall.asp"--> 
+   
+   <%
+   NomeStruttura     = "SEDI_Cliente"
+   DescStruttura     = "Sedi Cliente"
+   flagOperStruttura = "CUD"
+   ProfiloAccount    = "COLL"
+   %>
+   <!--#include virtual="/gscVirtual/configurazioni/sedi/StrutturaSede.asp"-->    
+
+   <%
+   NomeStruttura     = "CONTATTI_Cliente"
+   DescStruttura     = "Contatti Cliente"
+   flagOperStruttura = "CUD"
+   ProfiloAccount    = "COLL"
+   %>
+   <!--#include virtual="/gscVirtual/configurazioni/contatti/StrutturaContatto.asp"--> 
+   
+     <%if SoloLettura=false then%>
+		<div class="row"><div class="mx-auto">
+		<%RiferimentoA="center;#;;2;save;Registra; Registra;localFun('submit','0');S"%>
+		<!--#include virtual="/gscVirtual/include/Anchor.asp"-->			
+		</div></div>
+		<div class="row">
+			<div class="col">
+				&nbsp;
+			</div>
+		</div>
+   <%end if %>
+   
+			<!--#include virtual="/gscVirtual/include/CampiHidden.asp"-->
+<%
+  xx=createDataList("STATO","dataList_Stato","")
+  xx=createDataList("PROVINCIA_IT","absoluteProvinciaIT","")
+  
+  if listDataComu<>"" then 
+     'response.write "creo0:" & listDataComu & " per:" & idProvincia 
+     xx=createDataList("COMUNE_BYSIGLAPROV_IT",listDataComu,idProvincia)
+  end if 
+  
+  if listDataComuAmmi<>"" and listDataComuAmmi<>listDataComu then 
+     'response.write "creo1:" & listDataComuAmmi & " per:" & idProvinciaAmmi
+     xx=createDataList("COMUNE_BYSIGLAPROV_IT",listDataComuAmmi,idProvinciaAmmi)
+  end if 
+  if listDataComuPrep<>"" and listDataComuPrep<>listDataComuAmmi and listDataComuPrep<>listDataComu then 
+     'response.write "creo2:" & listDataComuPrep & " per:" & idProvinciaPrep  
+     xx=createDataList("COMUNE_BYSIGLAPROV_IT",listDataComuPrep,idProvinciaPrep)
+  end if 
+  
+%>
+			</form>
+<!--#include virtual="/gscVirtual/include/FormSoggetti.asp"-->
+		</div> <!-- container fluid -->
+    </div>
+    <!-- /#page-content-wrapper -->
+
+</div>
+<!-- /#wrapper -->
+
+<!--  Scripts-->
+<!--#include virtual="/gscVirtual/include/scriptsAll.asp"-->
+
+</body>
+
+</html>
